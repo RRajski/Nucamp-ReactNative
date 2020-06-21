@@ -6,6 +6,7 @@ import About from "./AboutComponent";
 import Contact from "./ContactComponent";
 import Reservation from "./ReservationComponent";
 import Favorites from "./FavoritesComponent";
+import Login from "./LoginComponent";
 import {
   View,
   Platform,
@@ -13,6 +14,8 @@ import {
   Text,
   ScrollView,
   Image,
+  Alert,
+  ToastAndroid,
 } from "react-native";
 import {
   createStackNavigator,
@@ -21,7 +24,9 @@ import {
 } from "react-navigation";
 import { Icon } from "react-native-elements";
 import SafeAreaView from "react-native-safe-area-view";
+import NetInfo from "@react-native-community/netinfo";
 import { connect } from "react-redux";
+
 import {
   fetchCampsites,
   fetchComments,
@@ -167,6 +172,31 @@ const FavoritesNavigator = createStackNavigator(
   }
 );
 
+const LoginNavigator = createStackNavigator(
+  {
+    Login: { screen: Login },
+  },
+  {
+    navigationOptions: ({ navigation }) => ({
+      headerStyle: {
+        backgroundColor: "#5637DD",
+      },
+      headerTintColor: "#fff",
+      headerTitleStyle: {
+        color: "#fff",
+      },
+      headerLeft: (
+        <Icon
+          name="sign-in"
+          type="font-awesome"
+          iconStyle={styles.stackIcon}
+          onPress={() => navigation.toggleDrawer()}
+        />
+      ),
+    }),
+  }
+);
+
 const HomeNavigator = createStackNavigator(
   {
     Home: { screen: Home },
@@ -216,6 +246,20 @@ const CustomDrawerContentComponent = (props) => (
 
 const MainNavigator = createDrawerNavigator(
   {
+    Login: {
+      screen: LoginNavigator,
+      navigationOptions: {
+        drawerIcon: ({ tintColor }) => (
+          <Icon
+            name="sign-in"
+            type="font-awesome"
+            size={24}
+            color={tintColor}
+          />
+        ),
+      },
+    },
+
     Home: {
       screen: HomeNavigator,
       navigationOptions: {
@@ -284,6 +328,7 @@ const MainNavigator = createDrawerNavigator(
     },
   },
   {
+    initialRouteName: "Home",
     drawerBackgroundColor: "#CEC8FF",
     contentComponent: CustomDrawerContentComponent,
   }
@@ -295,7 +340,49 @@ class Main extends Component {
     this.props.fetchComments();
     this.props.fetchPromotions();
     this.props.fetchPartners();
+
+    this.showNetInfo();
   }
+
+  showNetInfo = async () => {
+    let connectionInfo = await NetInfo.fetch();
+    Platform.OS === "ios"
+      ? Alert.alert("Initial Network Connectivity Type:", connectionInfo.type)
+      : ToastAndroid.show(
+          "Initial Network Connectivity Type: " + connectionInfo.type,
+          ToastAndroid.LONG
+        );
+  };
+
+  // this.unsubscribeNetInfo = NetInfo.addEventListener((connectionInfo) => {
+  //   this.handleConnectivityChange(connectionInfo);
+  // });
+
+  componentWillUnmount() {
+    this.unsubscribeNetInfo();
+  }
+
+  handleConnectivityChange = (connectionInfo) => {
+    let connectionMsg = "You are now connected to an active network.";
+    switch (connectionInfo.type) {
+      case "none":
+        connectionMsg = "No network connection is active.";
+        break;
+      case "unknown":
+        connectionMsg = "The network connection state is now unknown.";
+        break;
+      case "cellular":
+        connectionMsg = "You are now connected to a cellular network.";
+        break;
+      case "wifi":
+        connectionMsg = "You are now connected to a WiFi network.";
+        break;
+    }
+    Platform.OS === "ios"
+      ? Alert.alert("Connection change:", connectionMsg)
+      : ToastAndroid.show(connectionMsg, ToastAndroid.LONG);
+  };
+
   render() {
     return (
       <View
